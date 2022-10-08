@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test</title>
+</head>
+<body>
+  <!-- Display most recent data -->
+  <p>Server response: <span id="response">Nothing yet...</span></p>
+  
+  <!-- Canvas graphing element -->
+  <canvas id="chart" width="400" height="400"></canvas>
+  
+  <!-- Websockets client -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+  
+  <!-- Chart control functions -->
+  <script type="text/javascript" charset="utf-8">
+    const ctx = document.getElementById("chart").getContext("2d");
+    
+    function rect(x, y, w, h) {
+      ctx.rect(x, y, w, h);
+      ctx.stroke();
+    }
+    
+    function line(x1, y1, x2, y2) {
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    
+    function lines(points) {
+      //ctx.moveTo(...points[0]);
+      prev = points[0];
+      for (let point of points) {
+        //ctx.lineTo(...point);
+        line(prev[0], prev[1], point[0], point[1]);
+        prev = point;
+      }
+      ctx.stroke();
+    }
+    
+    function chartSetup() {
+      rect(0, 0, 400, 400);
+      line(0, 0, 400, 400);
+    }
+    
+    function chartDraw(log) {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, 400, 400);
+      
+      //xScale = 400 / log.length;
+      //yScale = 400 / Math.max(...log);
+      //lines(log.map((value, index) => [index * xScale, value * yScale]));
+      
+      ctx.fillStyle = "#FF0000";
+      //ctx.fillRect(0, 0, 400 * log[log.length - 1] / 1024, 10);
+      
+      for (let i = 0; i < log.length; i++) {
+        ctx.fillRect(4 * i, 400 * (1 - log[i] / 1024), 4, 400 * log[i] / 1024);
+      }
+    }
+    
+    chartSetup();
+    
+  </script>
+  
+  <!-- Client script -->
+  <script type="text/javascript" charset="utf-8">
+    // Elements
+    const response = document.getElementById("response");
+    
+    const log = Array(100).fill(0);
+        
+    // Websockets object
+    const socket = io();
+    
+    // When connected, tell the server
+    socket.on('connect', function() {
+      socket.emit('connected', 'ok');
+      console.log("Connected!");
+      socket.emit('requestdatastream');
+      console.log("sent requestdatastream")
+    });
+    
+    // When receive new data
+    socket.on("newdata", function(data) {
+      // Update the response element and roll the log
+      response.textContent = data;
+      log.shift();
+      log.push(parseInt(data));
+      chartDraw(log);
+    });
+    
+  </script>
+</body>
+</html>
